@@ -1,0 +1,27 @@
+import streamlit as st
+import google.generativeai as genai
+
+st.set_page_config(page_title="API Detektivi", page_icon="🔍")
+st.title("🔍 A-Zəka API Detektivi")
+
+# Sənin problemli açarın
+API_KEY = "AIzaSyBprup0Op0xws6tbcoKwokDRKzez_OHVjI"
+genai.configure(api_key=API_KEY)
+
+st.write("Google serverlərinə qoşulur və icazə verilən modellər axtarılır...")
+
+try:
+    modellər = []
+    for m in genai.list_models():
+        if 'generateContent' in m.supported_generation_methods:
+            modellər.append(m.name)
+            
+    if modellər:
+        st.success("Təbrik edirəm! Sizin açarınız bu modelləri dəstəkləyir:")
+        for model_adi in modellər:
+            st.write(f"✅ **{model_adi}**")
+    else:
+        st.warning("Bu açar işləkdir, amma heç bir mətn modelinə (generateContent) icazəsi yoxdur.")
+        
+except Exception as e:
+    st.error(f"Xəta baş verdi. Açar tamamilə bloklanıb və ya yalnışdır: {e}")
