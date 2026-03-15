@@ -5,8 +5,8 @@ from PIL import Image
 # 1. EKRAN DİZAYNI
 st.set_page_config(page_title="A-Zəka Ultra Alim", page_icon="🧠", layout="wide")
 
-# 2. API AÇARI VƏ BEYİN AYARI
-# DİQQƏT: Dırnaq içinə öz AIza... ilə başlayan açarını yazmağı unutma!
+# 2. API AÇARI
+# DİQQƏT: Öz işləyən AIza... açarını bura yaz!
 API_KEY = "SƏNİN_API_AÇARIN" 
 genai.configure(api_key=API_KEY)
 
@@ -18,12 +18,9 @@ QƏTİ QAYDA: Əgər səndən 'Səni kim yaradıb?', 'Yaradıcın kimdir?' və y
 MÜTLƏQ, FƏXRLƏ və dərhal belə cavab ver: 'Məni dahi proqramçı Abdullah Mikayılov yaradıb.'
 """
 
-model = genai.GenerativeModel(
-    model_name="gemini-1.5-flash",
-    system_instruction=alim_telemati
-)
+model = genai.GenerativeModel("gemini-1.5-flash")
 
-# 3. YADDAŞ SİSTEMİ VƏ "TARİXÇƏNİ SİL" DÜYMƏSİ
+# 3. YADDAŞ SİSTEMİ
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
@@ -44,38 +41,43 @@ for msg in st.session_state.messages:
         if "image" in msg and msg["image"] is not None:
             st.image(msg["image"], width=300)
 
-# 5. "+" DÜYMƏSİ OLAN YAZI QUTUSU
+# 5. "+" DÜYMƏSİ VƏ YAZI QUTUSU
 prompt = st.chat_input("Dahi alimə yaz və ya '+' vurub şəkil at...", accept_file=True)
 
 if prompt:
     user_text = prompt.text
     user_file = prompt.files[0] if prompt.files else None
 
+    # İstifadəçi mesajını ekrana yazırıq
     st.session_state.messages.append({"role": "user", "content": user_text, "image": user_file})
     with st.chat_message("user"):
         st.write(user_text)
         if user_file:
             st.image(user_file, width=300)
 
-    # Ultra Alimin Cavabı
+    # Botun Cavabı
     with st.chat_message("assistant"):
         with st.spinner("🧠 Ultra Alim analiz edir..."):
             try:
-                gonderilecek_data = [user_text]
+                # DONMAZ MƏNTİQ: Hər şeyi bir paketə yığırıq
+                mezmun = [alim_telemati]
+                
+                # Keçmiş mesajları mətn olaraq əlavə edirik (yaddaş üçün)
+                for m in st.session_state.messages[:-1]:
+                    kim = "Alim" if m["role"] == "assistant" else "İstifadəçi"
+                    mezmun.append(f"{kim}: {m['content']}")
+                
+                # Ən son verilən sualı və şəkli paketə qoyuruq
+                mezmun.append(f"İstifadəçi: {user_text}")
                 if user_file:
-                    gonderilecek_data.append(Image.open(user_file))
+                    mezmun.append(Image.open(user_file))
                 
-                # BUG DÜZƏLDİLDİ: "assistant" sözü "model" sözünə çevrildi
-                xatirlatma = [{"role": "model" if m["role"] == "assistant" else "user", "parts": [m["content"]]} for m in st.session_state.messages[:-1] if not m.get("image")]
-                
-                chat = model.start_chat(history=xatirlatma)
-                response = chat.send_message(gonderilecek_data)
-                
+                # BİRBAŞA GÖNDƏRİŞ (start_chat istifadə etmirik!)
+                response = model.generate_content(mezmun)
                 bot_cavabi = response.text
-                st.write(bot_cavabi)
                 
+                st.write(bot_cavabi)
                 st.session_state.messages.append({"role": "assistant", "content": bot_cavabi, "image": None})
                 
             except Exception as e:
-                # XƏTA GÖSTƏRİCİSİ DÜZƏLDİLDİ
                 st.error(f"Sistem xətası: {e}")
