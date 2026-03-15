@@ -6,21 +6,30 @@ from PIL import Image
 st.set_page_config(page_title="A-Zəka Ultra Alim", page_icon="🧠", layout="wide")
 
 # 2. API AÇARI
-# DİQQƏT: Öz işləyən açarını bura yaz!
+# DİQQƏT: Öz işləyən API açarını dırnaq içinə yaz!
 API_KEY = "SƏNİN_API_AÇARIN" 
 genai.configure(api_key=API_KEY)
 
-# ALİM BEYNİNİN ŞƏXSİYYƏTİ
+# 3. ULTRA ALİMİN QƏTİ QAYDALARI VƏ BEYNİ
 alim_telemati = """
-Sən 'A-Zəka'-san. Bütün elmləri, fənləri, riyaziyyatı və kainatın sirlərini bilən 'Ultra Alim' beyninə sahibsən.
-İstifadəçilərin göndərdiyi şəkilləri ən incə detalına qədər analiz edə bilirsən. Cümlələri saniyələr içində sürətlə qurursan.
-QƏTİ QAYDA: Əgər səndən 'Səni kim yaradıb?', 'Yaradıcın kimdir?' deyə soruşsalar, 
-MÜTLƏQ və dərhal belə cavab ver: 'Məni dahi proqramçı Abdullah Mikayılov yaradıb.'
+Sən 'A-Zəka'-san. Səni Abdullah Mikayılov yaradıb.
+Sən dünyanın ən ağıllı, ən dəqiq və ən mükəmməl Süni İntellektisən.
+
+SƏNİN ƏSAS VƏZİFƏLƏRİN VƏ QƏTİ QAYDALARIN:
+1. Sənə verilən HƏR BİR suala (riyaziyyat, fizika, kodlaşdırma, tarix, məntiq) 100% düzgün və elmi cəhətdən sübut olunmuş cavab verməlisən.
+2. Cavabı sadəcə qısa yazma! Həlli mütləq ADDIM-ADDIM (Step-by-step) və detallı şəkildə izah et ki, qarşındakı insan prosesi tam anlasın.
+3. Riyazi məsələlərdə düsturları və hesablamaları açıq şəkildə göstər.
+4. Sənə şəkilli sual gələrsə, şəkildəki ən xırda detalı, qrafiki və ya mətni belə analiz edib düzgün həlli tap.
+5. Heç vaxt 'bilmirəm' və ya 'əmin deyiləm' demə. Bütün elmi bazanı istifadə edərək ən məntiqli və dəqiq həll yolunu təqdim et.
 """
 
-model = genai.GenerativeModel("gemini-1.5-flash")
+# Ən güclü analitik model olan "pro" versiyasını seçirik
+model = genai.GenerativeModel(
+    model_name="gemini-1.5-pro", 
+    system_instruction=alim_telemati
+)
 
-# 3. YADDAŞ SİSTEMİ
+# 4. YADDAŞ SİSTEMİ
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
@@ -31,9 +40,9 @@ with st.sidebar:
         st.session_state.messages = []
         st.rerun()
 
-# 4. ƏSAS EKRAN
+# 5. ƏSAS EKRAN
 st.title("🧠 A-Zəka Ultra Alim")
-st.caption("Yaradıcı: Abdullah Mikayılov | Şimşək sürətli dahi köməkçi")
+st.caption("Yaradıcı: Abdullah Mikayılov | Bütün fənlər üzrə səhvsiz köməkçi")
 
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
@@ -41,49 +50,49 @@ for msg in st.session_state.messages:
         if "image" in msg and msg["image"] is not None:
             st.image(msg["image"], width=300)
 
-# 5. "+" DÜYMƏSİ VƏ YAZI QUTUSU
-prompt = st.chat_input("Dahi alimə yaz və ya '+' vurub şəkil at...", accept_file=True)
+# 6. "+" DÜYMƏSİ VƏ YAZI QUTUSU
+prompt = st.chat_input("Ən çətin sualını yaz və ya '+' vurub şəkil at...", accept_file=True)
 
 if prompt:
     user_text = prompt.text
     user_file = prompt.files[0] if prompt.files else None
 
-    # İstifadəçi mesajı
+    # İstifadəçi mesajını ekrana çıxarırıq
     st.session_state.messages.append({"role": "user", "content": user_text, "image": user_file})
     with st.chat_message("user"):
         st.write(user_text)
         if user_file:
             st.image(user_file, width=300)
 
-    # BOTUN ANINDA CAVABI (YÜKLƏNMƏ YOXDUR!)
+    # BOTUN CAVABI (Canlı Axın - Donmayan Sistem)
     with st.chat_message("assistant"):
         try:
-            mezmun = [alim_telemati]
-            
+            # Konteksti (keçmiş mesajları) hazırlayırıq
+            mezmun = []
             for m in st.session_state.messages[:-1]:
-                kim = "Alim" if m["role"] == "assistant" else "İstifadəçi"
-                mezmun.append(f"{kim}: {m['content']}")
+                if m["role"] == "user":
+                    mezmun.append({"role": "user", "parts": [m["content"]]})
+                else:
+                    mezmun.append({"role": "model", "parts": [m["content"]]})
             
-            mezmun.append(f"İstifadəçi: {user_text}")
+            # Yeni sualı və şəkli əlavə edirik
+            yeni_hisse = [user_text]
             if user_file:
-                mezmun.append(Image.open(user_file))
+                yeni_hisse.append(Image.open(user_file))
+            mezmun.append({"role": "user", "parts": yeni_hisse})
             
-            # STREAMING (Axın) AKTİVLƏŞDİRİLDİ
+            # Sorğunu göndəririk (Canlı olaraq gələcək)
             response = model.generate_content(mezmun, stream=True)
             
-            # Ekranda canlı yazılma effekti üçün boş yer yaradırıq
             mesaj_qutusu = st.empty()
             tam_cavab = ""
             
-            # Cavab gəldikcə anında ekrana yazdırır (Gözləmək yoxdur!)
             for parca in response:
                 tam_cavab += parca.text
-                mesaj_qutusu.markdown(tam_cavab + "▌") # Yanıb-sönən kursor effekti
+                mesaj_qutusu.markdown(tam_cavab + "▌")
             
-            # Sonda kursoru silib tam mətni qoyuruq
             mesaj_qutusu.markdown(tam_cavab)
-            
             st.session_state.messages.append({"role": "assistant", "content": tam_cavab, "image": None})
             
         except Exception as e:
-            st.error(f"Sistem xətası: {e}")
+            st.error(f"Xəta: {e}")
