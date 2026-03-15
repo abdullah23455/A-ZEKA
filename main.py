@@ -6,7 +6,7 @@ from PIL import Image
 st.set_page_config(page_title="A-Zəka Ultra Alim", page_icon="🧠", layout="wide")
 
 # 2. API AÇARI VƏ BEYİN AYARI
-# Öz işləyən açarını dırnaq içinə yaz
+# DİQQƏT: Dırnaq içinə öz AIza... ilə başlayan açarını yazmağı unutma!
 API_KEY = "SƏNİN_API_AÇARIN" 
 genai.configure(api_key=API_KEY)
 
@@ -18,7 +18,6 @@ QƏTİ QAYDA: Əgər səndən 'Səni kim yaradıb?', 'Yaradıcın kimdir?' və y
 MÜTLƏQ, FƏXRLƏ və dərhal belə cavab ver: 'Məni dahi proqramçı Abdullah Mikayılov yaradıb.'
 """
 
-# Modeli təlimatla birlikdə yaradırıq
 model = genai.GenerativeModel(
     model_name="gemini-1.5-flash",
     system_instruction=alim_telemati
@@ -27,12 +26,10 @@ model = genai.GenerativeModel(
 # 3. YADDAŞ SİSTEMİ VƏ "TARİXÇƏNİ SİL" DÜYMƏSİ
 if "messages" not in st.session_state:
     st.session_state.messages = []
-# Qeyd: Şəkilli və mətnli mürəkkəb söhbətlər üçün yaddaşı fərqli cür idarə edirik
 
 with st.sidebar:
     st.title("⚙️ İdarəetmə")
     st.markdown("---")
-    # SƏN İSTƏYƏN "TARİXÇƏNİ SİL" DÜYMƏSİ
     if st.button("🗑️ Tarixçəni Sil (Yeni Söhbət)", use_container_width=True):
         st.session_state.messages = []
         st.rerun()
@@ -41,23 +38,19 @@ with st.sidebar:
 st.title("🧠 A-Zəka Ultra Alim")
 st.caption("Yaradıcı: Abdullah Mikayılov | Bütün fənlər üzrə dahi köməkçi")
 
-# Köhnə mesajları və şəkilləri ekrana gətirir
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.write(msg["content"])
-        # Əgər mesajda şəkil varsa, onu da göstər
         if "image" in msg and msg["image"] is not None:
             st.image(msg["image"], width=300)
 
 # 5. "+" DÜYMƏSİ OLAN YAZI QUTUSU
-# accept_file=True sayəsində qutunun solunda '+' işarəsi yaranacaq!
 prompt = st.chat_input("Dahi alimə yaz və ya '+' vurub şəkil at...", accept_file=True)
 
 if prompt:
     user_text = prompt.text
-    user_file = prompt.files[0] if prompt.files else None # Yüklənən şəkli götür
+    user_file = prompt.files[0] if prompt.files else None
 
-    # İstifadəçinin yazdıqlarını və şəklini ekrana çıxar
     st.session_state.messages.append({"role": "user", "content": user_text, "image": user_file})
     with st.chat_message("user"):
         st.write(user_text)
@@ -68,23 +61,21 @@ if prompt:
     with st.chat_message("assistant"):
         with st.spinner("🧠 Ultra Alim analiz edir..."):
             try:
-                # Bota göndəriləcək məlumatlar (Mətn + Şəkil)
                 gonderilecek_data = [user_text]
                 if user_file:
-                    gonderilecek_data.append(Image.open(user_file)) # Şəkli bota oxuduruq
+                    gonderilecek_data.append(Image.open(user_file))
                 
-                # Bütün əvvəlki söhbətləri də bota xatırladırıq (Yaddaş üçün)
-                xatirlatma = [{"role": m["role"], "parts": [m["content"]]} for m in st.session_state.messages[:-1] if not m.get("image")]
+                # BUG DÜZƏLDİLDİ: "assistant" sözü "model" sözünə çevrildi
+                xatirlatma = [{"role": "model" if m["role"] == "assistant" else "user", "parts": [m["content"]]} for m in st.session_state.messages[:-1] if not m.get("image")]
                 
-                # Chat-ı başladır və yeni mesajı göndəririk
                 chat = model.start_chat(history=xatirlatma)
                 response = chat.send_message(gonderilecek_data)
                 
                 bot_cavabi = response.text
                 st.write(bot_cavabi)
                 
-                # Botun cavabını yaddaşa yaz
                 st.session_state.messages.append({"role": "assistant", "content": bot_cavabi, "image": None})
                 
             except Exception as e:
-                st.error("Bağlantı xətası. Lütfən API açarınızı yoxlayın və ya bir az sonra yenidən cəhd edin.")
+                # XƏTA GÖSTƏRİCİSİ DÜZƏLDİLDİ
+                st.error(f"Sistem xətası: {e}")
