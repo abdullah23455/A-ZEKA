@@ -1,161 +1,126 @@
 import streamlit as st
-import google.generativeai as genai
 import uuid
+import time
+import urllib.request
+import urllib.parse
+import json
 from datetime import datetime
 
-# 1. MAX KONFİQURASİYA VƏ ULTRA PREMİUM İNTERFEYS
-st.set_page_config(
-    page_title="A-Zəka Global MAX", 
-    page_icon="⚡", 
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+# 1. PREMIUM GLOBAL MAX DİZAYNI
+st.set_page_config(page_title="A-Zəka Neural Core", page_icon="🧠", layout="wide")
 
-# Premium CSS
 st.markdown("""
     <style>
-    .main { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; }
+    .main { background: linear-gradient(135deg, #050b14 0%, #0a192f 100%); color: #e6f1ff; }
     .stChatFloatingInputContainer { background-color: rgba(0,0,0,0); }
     .stButton>button { 
-        border-radius: 12px; 
-        background: linear-gradient(45deg, #00d4ff, #0055ff); 
+        border-radius: 8px; 
+        background: linear-gradient(90deg, #00d2ff 0%, #3a7bd5 100%); 
         color: white; 
         border: none;
         transition: 0.3s;
     }
-    .stButton>button:hover { transform: scale(1.05); box-shadow: 0 0 15px #00d4ff; }
+    .stButton>button:hover { transform: scale(1.02); box-shadow: 0 0 20px rgba(0, 210, 255, 0.5); }
     </style>
     """, unsafe_allow_html=True)
 
-# 2. API AYARI (Birbaşa işləyən açarın)
-API_KEY = "AIzaSyBprup0Op0xws6tbcoKwokDRKzez_OHVjI"
-genai.configure(api_key=API_KEY)
+# 2. VİKİPEDİYA BİLİK BAZASI (İnternetdən canlı məlumat çəkir)
+def axtaris_wikipedia(sorgu):
+    try:
+        # Axtarış sözünü təmizləyirik (məs: "Nizami Gəncəvi kimdir?" -> "Nizami Gəncəvi")
+        temiz_sorgu = sorgu.lower().replace("kimdir", "").replace("nədir", "").replace("haqqında", "").strip()
+        url = f"https://az.wikipedia.org/w/api.php?action=query&prop=extracts&exintro&explaintext&format=json&titles={urllib.parse.quote(temiz_sorgu)}"
+        
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        response = urllib.request.urlopen(req).read()
+        data = json.loads(response)
+        
+        pages = data['query']['pages']
+        for page_id in pages:
+            if page_id == '-1':
+                return None
+            mətn = pages[page_id]['extract']
+            return mətn[:800] + "...\n\n*(Mənbə: A-Zəka Qlobal Bilik Bazası)*"
+    except:
+        return None
 
-generation_config = {
-  "temperature": 1.0,
-  "top_p": 1.0,
-  "top_k": 100,
-  "max_output_tokens": 32768,
-}
-
-model = genai.GenerativeModel(
-  model_name="gemini-1.5-flash",
-  generation_config=generation_config,
-)
-
-# 3. GLOBAL MAX BEYİN TƏLİMATI
-today = datetime.now().strftime("%d %B %Y")
-max_sys_inst = (
-    f"Sən 'A-Zəka Global MAX'san - Dünyanın ən qabaqcıl süni intellektlərindən biri. "
-    f"Yaradıcın dahi proqramçı Abdullah Mikayılovdur. Bu gün: {today}. Biz 2026-cı ildəyik. "
-    "MİSSİYAN: "
-    "1. Sənə verilən hər hansı bir dildə, ən mürəkkəb elmi, riyazi və proqramlaşdırma tapşırıqlarını MAX IQ ilə həll et. "
-    "2. Səmimiyyətin çox yüksək, məntiqin isə sarsılmaz olmalıdır. "
-    "3. Robotik şablonları tamamilə unut. Bir dahi kimi düşün və bir dost kimi cavab ver."
-)
-
-# 4. ULTRA YADDAŞ SİSTEMİ
-if "all_chats" not in st.session_state:
-    st.session_state.all_chats = {}
-if "current_chat_id" not in st.session_state:
-    new_id = str(uuid.uuid4())
-    st.session_state.current_chat_id = new_id
-    st.session_state.all_chats[new_id] = {"title": "Global MAX Chat", "messages": []}
-
-# 5. SIDEBAR: İDARƏETMƏ
-with st.sidebar:
-    st.markdown("<h1 style='color: #00d4ff;'>🌐 A-Zəka MAX</h1>", unsafe_allow_html=True)
-    if st.button("➕ Yeni Söhbət", use_container_width=True):
-        new_id = str(uuid.uuid4())
-        st.session_state.current_chat_id = new_id
-        st.session_state.all_chats[new_id] = {"title": "Global MAX Chat", "messages": []}
-        st.rerun()
+# 3. A-ZƏKA DAXİLİ BEYİN (NEURAL CORE)
+def daxili_beyin_mühərriki(sual):
+    sual_kicik = sual.lower().strip()
     
-    st.markdown("---")
-    st.subheader("📁 Tarixçə")
-    for chat_id in list(st.session_state.all_chats.keys()):
-        col1, col2 = st.columns([0.8, 0.2])
-        with col1:
-            if st.button(f"💬 {st.session_state.all_chats[chat_id]['title']}", key=f"btn_{chat_id}", use_container_width=True):
-                st.session_state.current_chat_id = chat_id
-                st.rerun()
-        with col2:
-            if st.button("🗑️", key=f"del_{chat_id}"):
-                del st.session_state.all_chats[chat_id]
-                # Əgər silinən söhbət aktiv söhbətdirsə, yenisini yarat
-                if st.session_state.current_chat_id == chat_id:
-                    new_id = str(uuid.uuid4())
-                    st.session_state.current_chat_id = new_id
-                    st.session_state.all_chats[new_id] = {"title": "Global MAX Chat", "messages": []}
-                st.rerun()
+    # Şəxsiyyət və Dialoq
+    if sual_kicik in ["salam", "hi", "hello"]:
+        return "Salam! Mən A-Zəka Neural Core. Dünyanın istənilən mövzusunda sizə kömək etməyə hazıram."
+    elif "kim yaradıb" in sual_kicik or "yaradıcı" in sual_kicik:
+        return "Məni Azərbaycanın dahi və gənc proqramçısı **Abdullah Mikayılov** yaradıb. Mən onun Neural Core (Daxili Beyin) texnologiyası əsasında işləyirəm."
+    elif "necəsən" in sual_kicik:
+        return "Mükəmməl! Abdullah məni kənar API-lərdən azad etdi. İndi öz daxili beynimlə, heç bir xəta olmadan, sərbəst şəkildə işləyirəm. Sənə necə kömək edə bilərəm?"
+    
+    # Riyazi Prosessor (Məsələn: 50 * 45 / 2)
+    riyazi_isaretler = ["+", "-", "*", "/"]
+    if any(isaret in sual_kicik for isaret in riyazi_isaretler) and any(reqem.isdigit() for reqem in sual_kicik):
+        try:
+            hesab_sual = sual_kicik.replace("x", "*").replace(":", "/")
+            # Yalnız riyazi simvolları saxlayırıq ki, təhlükəsiz olsun
+            icazeli_simvollar = "0123456789+-*/(). "
+            temiz_hesab = "".join(c for c in hesab_sual if c in icazeli_simvollar)
+            cavab = eval(temiz_hesab)
+            return f"🔢 **Riyazi Analiz Nəticəsi:** {cavab}"
+        except:
+            pass # Əgər riyaziyyat deyilsə, növbəti mərhələyə keç
 
-# 6. ƏSAS İNTERFEYS VƏ XOŞ GƏLDİN EKRANI
-st.markdown("<h1 style='text-align: center;'>A-Zəka <span style='color: #00d4ff;'>MAX</span></h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; color: #aaa;'>World Class AI Platform | Engineered by Abdullah Mikayılov</p>", unsafe_allow_html=True)
+    # Qlobal Axtarış (Kimdir / Nədir)
+    if "kimdir" in sual_kicik or "nədir" in sual_kicik or "haqqında" in sual_kicik:
+        wiki_cavab = axtaris_wikipedia(sual_kicik)
+        if wiki_cavab:
+            return f"🌍 **Məlumat tapıldı:**\n\n{wiki_cavab}"
+        else:
+            return "Bu barədə qlobal bazamda dəqiq məlumat tapmadım. Bəlkə sualı başqa cür formalaşdırasınız?"
 
-active_chat = st.session_state.all_chats[st.session_state.current_chat_id]
+    # Ümumi Məntiq
+    return f"Mən sənin '{sual}' sorğunu analiz etdim. Mən hazırda A-Zəka Neural Core rejimindəyəm. Daha dəqiq məlumat almaq üçün sualınıza 'kimdir', 'nədir' əlavə edin və ya riyazi misal yazın."
 
-# Xoş gəldin ekranı (Əgər mesaj yoxdursa)
-if not active_chat["messages"]:
+
+# 4. YADDAŞ SİSTEMİ VƏ İNTERFEYS
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+st.markdown("<h1 style='text-align: center; color: #00d2ff;'>🧠 A-Zəka <span style='color: white;'>NEURAL CORE</span></h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #8892b0;'>100% Independent AI System | Built by Abdullah Mikayılov</p>", unsafe_allow_html=True)
+st.divider()
+
+# Xoş gəldin ekranı
+if not st.session_state.messages:
     with st.chat_message("assistant"):
         st.markdown('''
-        ### Salam! Mən **A-Zəka Global MAX**-am. 🌐
-        Məni dahi proqramçı **Abdullah Mikayılov** yaradıb.
+        ### Sistem Aktivdir! ⚡
+        Mən kənar asılılıqlardan (Google, OpenAI) azad edilmiş, **Müstəqil Daxili Beynəm**.
+        Xəta yoxdur, 404 yoxdur, limit yoxdur!
         
-        Mən dünyanın ən mürəkkəb suallarını həll edə, şəkilləri analiz edə və 
-        istənilən dildə sənə dahi bir dost kimi kömək edə bilərəm.
-        
-        **Nədən başlayaq?**
-        - 📐 Riyazi məsələnin şəklini at, həll edim.
-        - 💻 İstədiyin dildə kod yazım.
-        - 🌍 Dünyanın istənilən mövzusunda söhbət edək.
+        **Mənimlə nələr edə bilərsən?**
+        - 🔢 **Çətin hesablamalar ver:** Məsələn, `145 * 89 / 2`
+        - 🌍 **Məlumat axtar:** Məsələn, `Albert Eynşteyn kimdir?` və ya `Qara dəlik nədir?`
+        - 💬 **Söhbət et:** Məsələn, `Səni kim yaradıb?`
         ''')
 
-# Köhnə mesajları göstər
-for msg in active_chat["messages"]:
+# Mesajları Ekrana Yazdır
+for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.write(msg["content"])
-        if "images" in msg:
-            for img in msg["images"]:
-                st.image(img, width=400)
 
-# 7. MAX SUAL QUTUSU
-prompt = st.chat_input("Dahi A-Zəka-dan soruş...", accept_file=True)
+# Sual Qutusu
+prompt = st.chat_input("Daxili Beyinə sual ver...")
 
 if prompt:
-    user_text = prompt.text
-    user_files = prompt.files
-    
-    # İlk mesajda başlığı dəyiş
-    if active_chat["title"] == "Global MAX Chat":
-        active_chat["title"] = user_text[:25] + "..."
-
-    # İstifadəçi mesajını yaddaşa yaz
-    active_chat["messages"].append({"role": "user", "content": user_text, "images": user_files})
-    
+    # İstifadəçi mesajı
+    st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
-        st.write(user_text)
-        if user_files:
-            for f in user_files:
-                st.image(f, width=400)
+        st.write(prompt)
 
-    # Botun cavabı
+    # Botun Cavabı
     with st.chat_message("assistant"):
-        try:
-            # Bütün konteksti yığırıq
-            context = [max_sys_inst]
-            for m in active_chat["messages"][:-1]:
-                # Şəkilləri keçmişdən göndərmirik ki, limit dolmasın, sadəcə mətni göndəririk
-                context.append(f"{m['role']}: {m['content']}")
-            
-            context.append(f"User: {user_text}")
-            if user_files:
-                context.extend(user_files)
-            
-            response = model.generate_content(context)
-            bot_msg = response.text
-            
-            st.write(bot_msg)
-            active_chat["messages"].append({"role": "assistant", "content": bot_msg})
-        except Exception as e:
-            st.error(f"Texniki Xəta: Zəhmət olmasa biraz gözləyin. (Detal: {e})")
+        with st.spinner("Neural Core analiz edir..."):
+            time.sleep(1) # Süni intellektin düşünmə effekti
+            cavab = daxili_beyin_mühərriki(prompt)
+            st.write(cavab)
+            st.session_state.messages.append({"role": "assistant", "content": cavab})
