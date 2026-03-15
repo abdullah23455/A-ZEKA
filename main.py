@@ -12,7 +12,7 @@ API_KEY = "AIzaSyBprup0Op0xws6tbcoKwokDRKzez_OHVjI"
 genai.configure(api_key=API_KEY)
 
 # ƏN CLASSİC VƏ PROBLEMSİZ MODEL
-model = genai.GenerativeModel('gemini-pro')
+model = genai.GenerativeModel('gemini-1.5-flash')
 
 # 3. YADDAŞ SİSTEMİ
 if "messages" not in st.session_state:
